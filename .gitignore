@@ -1,2 +1,4 @@
 node_modules
 package-lock.json
+.env
+simpson-construction-2feffee529fd.json

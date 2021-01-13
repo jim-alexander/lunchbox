@@ -1,24 +1,31 @@
 const CryptoJS = require('crypto-js')
 const fs = require('fs')
 
-let file = 'my.lunch'
+const { db } = require('./firebase')
+
+const encrypt = (master, data) => CryptoJS.AES.encrypt(JSON.stringify(data), master).toString()
+
+const decrypt = (master, data) => {
+  let bytes = CryptoJS.AES.decrypt(data, master)
+  return JSON.parse(bytes.toString(CryptoJS.enc.Utf8))
+}
 
 module.exports = {
-  load: (master) => {
+  load: async (uid, master) => {
     try {
-      let hash = fs.readFileSync(file, { encoding: 'utf-8' })
-      let bytes = CryptoJS.AES.decrypt(hash, master) // Decrypt
-      return JSON.parse(bytes.toString(CryptoJS.enc.Utf8))
+      const hash = await db.collection('users').doc(uid).get()
+      return decrypt(master, hash.data().lunch)
     } catch (err) {
       console.error('Wrong master password, please try again.')
     }
   },
-  save: (master, data) =>
-    new Promise((res, rej) => {
+  save: (uid, master) =>
+    new Promise(async (res, rej) => {
       if (data) {
         try {
-          let hash = CryptoJS.AES.encrypt(JSON.stringify(data), master).toString() // Encrypt
-          fs.writeFileSync(file, hash)
+          let hash = encrypt(master, data)
+          const docRef = db.collection('users').doc(uid)
+          await docRef.set({ lunch: hash })
           res()
         } catch (err) {
           rej('data is null')
